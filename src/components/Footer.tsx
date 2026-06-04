@@ -2,10 +2,11 @@ import Link from "next/link";
 
 const companyInfo = {
   name: "묵향인쇄",
-  representative: "홍길동",
-  businessNumber: "123-45-67890",
-  phone: "02-1234-5678",
-  address: "서울특별시 강남구 테헤란로 123, 4층",
+  representative: "허렬",
+  businessNumber: "519-18-02069",
+  phone: "031-989-0317",
+  handphone : "010-3996-0740",
+  address: "경기 김포시 통진읍 김포대로 2323",
 };
 
 export default function Footer() {
@@ -28,7 +29,7 @@ export default function Footer() {
           </Link>
           <span className="hidden text-border sm:inline">|</span>
           <Link
-            href="/admin"
+            href="/admin/login"
             className="text-sm text-muted transition-colors hover:text-brand"
           >
             관리자
@@ -41,7 +42,8 @@ export default function Footer() {
             대표자: {companyInfo.representative} &nbsp;|&nbsp; 사업자등록번호:{" "}
             {companyInfo.businessNumber}
           </p>
-          <p>전화번호: {companyInfo.phone}</p>
+          <p>전화번호: {companyInfo.phone}
+          &nbsp;|&nbsp;핸드폰: {companyInfo.handphone}</p>
           <p>주소: {companyInfo.address}</p>
         </div>
 
