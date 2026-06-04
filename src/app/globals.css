@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-brand: #1b5e3b;
+  --color-brand-dark: #144a2e;
+  --color-brand-light: #2d7a52;
+  --color-border: #e5e5e5;
+  --color-muted: #6b7280;
+  --font-sans: "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+body {
+  background: #ffffff;
+  color: #1f2937;
+  font-family: var(--font-sans);
+}
