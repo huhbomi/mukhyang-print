@@ -1,4 +1,5 @@
 import Link from "next/link";
+import RichTextContent from "@/components/RichTextContent";
 import { formatNoticeDate } from "@/lib/notices";
 import type { Notice } from "@/types/notices";
 
@@ -33,7 +34,7 @@ export default function NoticeDetail({ notice }: { notice: Notice }) {
         </DetailRow>
         <DetailRow label="날짜">{formatNoticeDate(notice.created_at)}</DetailRow>
         <DetailRow label="내용" className="border-b-0">
-          <div className="whitespace-pre-wrap leading-relaxed">{notice.content}</div>
+          <RichTextContent html={notice.content} />
         </DetailRow>
       </div>
 

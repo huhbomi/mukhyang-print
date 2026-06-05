@@ -48,6 +48,7 @@ function InquiryDetailContent({ id }: InquiryDetailLoaderProps) {
             setInquiry(data);
           }
         } catch (error) {
+          console.error("[InquiryDetailLoader] 문의 상세 조회 실패:", error);
           const message =
             error instanceof Error ? error.message : "문의 상세를 불러오지 못했습니다.";
           setErrorMessage(message);
@@ -60,9 +61,11 @@ function InquiryDetailContent({ id }: InquiryDetailLoaderProps) {
 
       const detail = readInquiryDetailFromSession(id);
       setInquiry(detail);
+
       if (!detail) {
         setErrorMessage("문의를 찾을 수 없습니다.");
       }
+
       setIsLoading(false);
     }
 

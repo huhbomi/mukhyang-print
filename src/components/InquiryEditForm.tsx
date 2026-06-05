@@ -3,12 +3,25 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import InquiryAttachmentField, {
+  type PendingFile,
+} from "@/components/InquiryAttachmentField";
+import InquiryAttachmentList from "@/components/InquiryAttachmentList";
+import RichTextEditor from "@/components/RichTextEditor";
+import {
+  deleteInquiryAttachmentApi,
+  readInquiryAttachmentsFromSession,
+  removeInquiryAttachmentsFromSession,
+  uploadInquiryAttachmentsApi,
+} from "@/lib/inquiry-attachments";
 import {
   readInquiryDetailFromSession,
   removeInquiryDetailFromSession,
   updateInquiryWithPassword,
 } from "@/lib/inquiries";
+import { isEmptyHtml, sanitizeHtml } from "@/lib/sanitize-html";
 import { isSupabaseConfigured } from "@/lib/supabase";
+import type { InquiryAttachment } from "@/types/inquiry-attachments";
 import { INQUIRY_TYPES, type InquiryDetail } from "@/types/inquiries";
 
 type FormRowProps = {
@@ -37,18 +50,17 @@ const inputClassName =
 const buttonOutlineClass =
   "inline-block w-full border border-gray-400 px-10 py-2.5 text-center text-sm text-gray-700 transition-colors hover:border-brand hover:text-brand sm:w-auto";
 
-function validateEditForm(data: FormData): string | null {
+function validateEditForm(data: FormData, contentHtml: string): string | null {
   const writer = data.get("author")?.toString().trim() ?? "";
   const password = data.get("password")?.toString() ?? "";
   const inquiryType = data.get("type")?.toString().trim() ?? "";
   const title = data.get("title")?.toString().trim() ?? "";
-  const content = data.get("content")?.toString().trim() ?? "";
 
   if (!writer) return "작성자를 입력해 주세요.";
   if (!password) return "비밀번호를 입력해 주세요.";
   if (!inquiryType) return "문의유형을 선택해 주세요.";
   if (!title) return "제목을 입력해 주세요.";
-  if (!content) return "내용을 입력해 주세요.";
+  if (isEmptyHtml(contentHtml)) return "내용을 입력해 주세요.";
 
   return null;
 }
@@ -60,20 +72,37 @@ type InquiryEditFormProps = {
 export default function InquiryEditForm({ inquiryId }: InquiryEditFormProps) {
   const router = useRouter();
   const [inquiry, setInquiry] = useState<InquiryDetail | null>(null);
+  const [contentHtml, setContentHtml] = useState("");
+  const [existingAttachments, setExistingAttachments] = useState<InquiryAttachment[]>([]);
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<string[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const detail = readInquiryDetailFromSession(inquiryId);
+    const attachments = readInquiryAttachmentsFromSession(inquiryId);
     setInquiry(detail);
+    setContentHtml(detail?.content ?? "");
+    setExistingAttachments(attachments);
     setIsLoading(false);
   }, [inquiryId]);
+
+  const visibleAttachments = existingAttachments.filter(
+    (item) => !pendingDeleteIds.includes(item.id)
+  );
+
+  const handleMarkDelete = (attachmentId: string) => {
+    setPendingDeleteIds((prev) =>
+      prev.includes(attachmentId) ? prev : [...prev, attachmentId]
+    );
+  };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const formData = new FormData(e.currentTarget);
-    const validationError = validateEditForm(formData);
+    const validationError = validateEditForm(formData, contentHtml);
 
     if (validationError) {
       alert(validationError);
@@ -98,7 +127,7 @@ export default function InquiryEditForm({ inquiryId }: InquiryEditFormProps) {
         email: email || null,
         inquiry_type: formData.get("type")!.toString().trim(),
         title: formData.get("title")!.toString().trim(),
-        content: formData.get("content")!.toString().trim(),
+        content: sanitizeHtml(contentHtml),
       });
 
       if (!success) {
@@ -106,12 +135,26 @@ export default function InquiryEditForm({ inquiryId }: InquiryEditFormProps) {
         return;
       }
 
+      for (const attachmentId of pendingDeleteIds) {
+        await deleteInquiryAttachmentApi(inquiryId, attachmentId, { password });
+      }
+
+      if (pendingFiles.length > 0) {
+        await uploadInquiryAttachmentsApi(
+          inquiryId,
+          pendingFiles.map((item) => item.file)
+        );
+      }
+
       alert("수정되었습니다.");
       removeInquiryDetailFromSession(inquiryId);
+      removeInquiryAttachmentsFromSession(inquiryId);
       router.push(`/inquiry/${inquiryId}/password`);
     } catch (error) {
       console.error("[InquiryEditForm] 수정 실패 (catch)", error);
-      alert("수정 중 오류가 발생했습니다.");
+      const message =
+        error instanceof Error ? error.message : "수정 중 오류가 발생했습니다.";
+      alert(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -195,14 +238,36 @@ export default function InquiryEditForm({ inquiryId }: InquiryEditFormProps) {
         </FormRow>
 
         <FormRow label="내용" required>
-          <textarea
-            name="content"
-            rows={14}
-            defaultValue={inquiry.content}
-            className="w-full resize-y border border-gray-300 bg-white px-3 py-3 text-sm text-gray-800 outline-none focus:border-brand"
-            placeholder="내용을 입력해 주세요"
+          <RichTextEditor
+            value={contentHtml}
+            onChange={setContentHtml}
             disabled={isSubmitting}
+            minHeight={320}
           />
+        </FormRow>
+
+        <FormRow label="첨부파일">
+          <div className="space-y-4">
+            {visibleAttachments.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs text-muted">기존 첨부파일</p>
+                <InquiryAttachmentList
+                  attachments={visibleAttachments}
+                  showDelete
+                  onDelete={handleMarkDelete}
+                  isDeletingId={isSubmitting ? "all" : null}
+                />
+              </div>
+            )}
+            <div>
+              <p className="mb-2 text-xs text-muted">새 첨부파일 추가</p>
+              <InquiryAttachmentField
+                files={pendingFiles}
+                onChange={setPendingFiles}
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
         </FormRow>
 
         <FormRow label="비밀번호 확인" required>

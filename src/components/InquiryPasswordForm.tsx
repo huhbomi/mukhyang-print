@@ -4,6 +4,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import {
+  saveInquiryPasswordToSession,
+} from "@/lib/inquiry-attachments";
+import {
   fetchInquiryDetailByPassword,
   saveInquiryDetailToSession,
 } from "@/lib/inquiries";
@@ -49,6 +52,8 @@ export default function InquiryPasswordForm({ postId }: InquiryPasswordFormProps
       }
 
       saveInquiryDetailToSession(postId, detail);
+      saveInquiryPasswordToSession(postId, password);
+
       router.push(`/inquiry/${postId}`);
     } catch {
       alert("비밀번호 확인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");

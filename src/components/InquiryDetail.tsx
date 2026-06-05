@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import InquiryAdminReplyPanel from "@/components/InquiryAdminReplyPanel";
 import InquiryAdminReplySection from "@/components/InquiryAdminReplySection";
+import InquiryDetailAttachments from "@/components/InquiryDetailAttachments";
+import RichTextContent from "@/components/RichTextContent";
 import { useAdmin } from "@/contexts/AdminContext";
 import {
   deleteInquiryWithPassword,
@@ -12,6 +14,7 @@ import {
   mapAdminReply,
   removeInquiryDetailFromSession,
 } from "@/lib/inquiries";
+import { removeInquiryPasswordFromSession } from "@/lib/inquiry-attachments";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { InquiryDetail as InquiryDetailType } from "@/types/inquiries";
 
@@ -76,6 +79,7 @@ export default function InquiryDetail({
       }
 
       removeInquiryDetailFromSession(inquiry.id);
+      removeInquiryPasswordFromSession(inquiry.id);
       alert("삭제되었습니다.");
       router.push("/inquiry");
     } catch {
@@ -110,11 +114,11 @@ export default function InquiryDetail({
           <h2 className="text-sm font-semibold text-gray-800">문의 내용</h2>
         </div>
         <div className="bg-white px-4 py-5 md:px-6 md:py-6">
-          <div className="whitespace-pre-line text-sm leading-relaxed text-gray-800">
-            {inquiry.content}
-          </div>
+          <RichTextContent html={inquiry.content} />
         </div>
       </div>
+
+      <InquiryDetailAttachments inquiryId={inquiry.id} />
 
       {!isAdmin && <InquiryAdminReplySection reply={adminReply} />}
       {isAdmin && (

@@ -3,6 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import InquiryAttachmentField, {
+  type PendingFile,
+} from "@/components/InquiryAttachmentField";
+import RichTextEditor from "@/components/RichTextEditor";
+import { uploadInquiryAttachmentsApi } from "@/lib/inquiry-attachments";
+import { isEmptyHtml, sanitizeHtml } from "@/lib/sanitize-html";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 import type { InquiryInsert } from "@/types/inquiries";
 import { INQUIRY_TYPES } from "@/types/inquiries";
@@ -32,53 +38,44 @@ function FormRow({ label, required, children }: FormRowProps) {
 const inputClassName =
   "w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none transition-colors focus:border-brand";
 
-function EditorToolbar() {
-  const tools = ["굵게", "기울임", "밑줄", "링크", "이미지", "정렬"];
-  return (
-    <div className="flex flex-wrap gap-0 border-b border-gray-300 bg-[#f0f0f0] px-2 py-1.5">
-      {tools.map((tool) => (
-        <button
-          key={tool}
-          type="button"
-          className="px-2.5 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-200 hover:text-gray-800"
-          aria-label={tool}
-        >
-          {tool}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function validateInquiryForm(data: FormData): string | null {
+function validateInquiryForm(
+  data: FormData,
+  contentHtml: string,
+  inquiryType: string
+): string | null {
   const writer = data.get("author")?.toString().trim() ?? "";
   const password = data.get("password")?.toString() ?? "";
-  const inquiryType = data.get("type")?.toString().trim() ?? "";
   const title = data.get("title")?.toString().trim() ?? "";
-  const content = data.get("content")?.toString().trim() ?? "";
 
   if (!writer) return "작성자를 입력해 주세요.";
   if (!password) return "비밀번호를 입력해 주세요.";
-  if (!inquiryType) return "문의유형을 선택해 주세요.";
+  if (!inquiryType.trim()) return "문의유형을 선택해주세요.";
   if (!title) return "제목을 입력해 주세요.";
-  if (!content) return "내용을 입력해 주세요.";
+  if (isEmptyHtml(contentHtml)) return "내용을 입력해 주세요.";
 
   return null;
 }
 
-function buildInquiryInsert(data: FormData): InquiryInsert {
+function buildInquiryInsert(
+  id: string,
+  data: FormData,
+  contentHtml: string,
+  inquiryType: string
+): InquiryInsert {
   const phone = data.get("phone")?.toString().trim() ?? "";
   const email = data.get("email")?.toString().trim() ?? "";
 
   return {
-    inquiry_type: data.get("type")!.toString().trim(),
+    id,
+    inquiry_type: inquiryType.trim(),
     title: data.get("title")!.toString().trim(),
     writer: data.get("author")!.toString().trim(),
     password: data.get("password")!.toString(),
     phone: phone || null,
     email: email || null,
-    content: data.get("content")!.toString().trim(),
+    content: sanitizeHtml(contentHtml),
     is_private: true,
+    answer_status: "답변대기",
   };
 }
 
@@ -86,6 +83,9 @@ export default function InquiryWriteForm() {
   const router = useRouter();
   const [agreed, setAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contentHtml, setContentHtml] = useState("");
+  const [inquiryType, setInquiryType] = useState("");
+  const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -96,7 +96,13 @@ export default function InquiryWriteForm() {
     }
 
     const formData = new FormData(e.currentTarget);
-    const validationError = validateInquiryForm(formData);
+
+    if (!inquiryType.trim()) {
+      alert("문의유형을 선택해주세요.");
+      return;
+    }
+
+    const validationError = validateInquiryForm(formData, contentHtml, inquiryType);
 
     if (validationError) {
       alert(validationError);
@@ -110,19 +116,48 @@ export default function InquiryWriteForm() {
 
     setIsSubmitting(true);
 
+    const password = formData.get("password")!.toString();
+
     try {
       const supabase = getSupabaseClient();
-      const payload = buildInquiryInsert(formData);
+      const inquiryId = crypto.randomUUID();
+      const payload = buildInquiryInsert(inquiryId, formData, contentHtml, inquiryType);
+
+      console.log("[InquiryWriteForm] submit payload:", {
+        ...payload,
+        password: "[MASKED]",
+        inquiry_type: payload.inquiry_type,
+        hasInquiryType: Boolean(payload.inquiry_type?.trim()),
+      });
 
       const { error } = await supabase.from("inquiries").insert(payload);
 
       if (error) {
+        console.error("[InquiryWriteForm] inquiries INSERT 실패:", error);
         alert(`문의 등록에 실패했습니다.\n${error.message}`);
         return;
       }
 
+      if (pendingFiles.length > 0) {
+        try {
+          await uploadInquiryAttachmentsApi(
+            inquiryId,
+            pendingFiles.map((item) => item.file)
+          );
+        } catch (uploadError) {
+          const message =
+            uploadError instanceof Error
+              ? uploadError.message
+              : "첨부파일 업로드에 실패했습니다.";
+          alert(
+            `문의는 등록되었으나 첨부파일 업로드에 실패했습니다.\n${message}`
+          );
+        }
+      }
+
       router.push("/inquiry");
-    } catch {
+    } catch (unexpectedError) {
+      console.error("[InquiryWriteForm] 문의 등록 예외:", unexpectedError);
       alert("문의 등록 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
     } finally {
       setIsSubmitting(false);
@@ -179,10 +214,12 @@ export default function InquiryWriteForm() {
 
         <FormRow label="문의유형" required>
           <select
-            name="type"
+            name="inquiry_type"
+            value={inquiryType}
+            onChange={(e) => setInquiryType(e.target.value)}
             className={`${inputClassName} max-w-xs`}
-            defaultValue=""
             disabled={isSubmitting}
+            required
           >
             <option value="" disabled>
               선택해 주세요
@@ -206,16 +243,20 @@ export default function InquiryWriteForm() {
         </FormRow>
 
         <FormRow label="내용" required>
-          <div className="overflow-hidden border border-gray-300">
-            <EditorToolbar />
-            <textarea
-              name="content"
-              rows={14}
-              className="w-full resize-y border-0 bg-white px-3 py-3 text-sm text-gray-800 outline-none focus:ring-0"
-              placeholder="내용을 입력해 주세요"
-              disabled={isSubmitting}
-            />
-          </div>
+          <RichTextEditor
+            value={contentHtml}
+            onChange={setContentHtml}
+            disabled={isSubmitting}
+            minHeight={320}
+          />
+        </FormRow>
+
+        <FormRow label="첨부파일">
+          <InquiryAttachmentField
+            files={pendingFiles}
+            onChange={setPendingFiles}
+            disabled={isSubmitting}
+          />
         </FormRow>
 
         <FormRow label="개인정보 동의" required>

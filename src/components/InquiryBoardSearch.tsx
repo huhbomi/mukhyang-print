@@ -1,10 +1,21 @@
 "use client";
 
 import type { FormEvent } from "react";
+import type { InquirySearchType } from "@/lib/inquiries";
 
-export default function InquiryBoardSearch() {
+type InquiryBoardSearchProps = {
+  onSearch?: (searchType: InquirySearchType, keyword: string) => void;
+};
+
+export default function InquiryBoardSearch({ onSearch }: InquiryBoardSearchProps) {
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    const formData = new FormData(e.currentTarget);
+    const searchType = (formData.get("searchType")?.toString() ?? "all") as InquirySearchType;
+    const keyword = formData.get("keyword")?.toString() ?? "";
+
+    onSearch?.(searchType, keyword);
   };
 
   return (

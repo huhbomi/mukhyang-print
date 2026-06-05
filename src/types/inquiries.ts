@@ -1,6 +1,7 @@
 export type AnswerStatus = "답변대기" | "답변완료";
 
 export type InquiryInsert = {
+  id: string;
   inquiry_type: string;
   title: string;
   writer: string;
@@ -9,6 +10,7 @@ export type InquiryInsert = {
   email: string | null;
   content: string;
   is_private: boolean;
+  answer_status: AnswerStatus;
 };
 
 /** inquiry_list_view — 목록용 */

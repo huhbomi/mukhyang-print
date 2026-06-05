@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import RichTextEditor from "@/components/RichTextEditor";
 import {
   createNoticeApi,
   updateNoticeApi,
 } from "@/lib/notices";
+import { isEmptyHtml, sanitizeHtml } from "@/lib/sanitize-html";
 import { isSupabaseConfigured } from "@/lib/supabase";
 
 const inputClassName =
@@ -31,16 +33,16 @@ export default function AdminNoticeForm({
 }: AdminNoticeFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [contentHtml, setContentHtml] = useState(defaultContent);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const formData = new FormData(e.currentTarget);
     const title = formData.get("title")?.toString().trim() ?? "";
-    const content = formData.get("content")?.toString().trim() ?? "";
     const is_pinned = formData.get("is_pinned") === "on";
 
-    if (!title || !content) {
+    if (!title || isEmptyHtml(contentHtml)) {
       alert("제목과 내용을 입력해 주세요.");
       return;
     }
@@ -51,6 +53,8 @@ export default function AdminNoticeForm({
     }
 
     setIsSubmitting(true);
+
+    const content = sanitizeHtml(contentHtml);
 
     try {
       if (mode === "create") {
@@ -94,18 +98,12 @@ export default function AdminNoticeForm({
         />
       </div>
       <div>
-        <label htmlFor="content" className="mb-1.5 block text-sm font-medium text-gray-700">
-          내용
-        </label>
-        <textarea
-          id="content"
-          name="content"
-          required
-          rows={12}
-          defaultValue={defaultContent}
-          className={`${inputClassName} resize-y`}
-          placeholder="내용을 입력하세요"
+        <label className="mb-1.5 block text-sm font-medium text-gray-700">내용</label>
+        <RichTextEditor
+          value={contentHtml}
+          onChange={setContentHtml}
           disabled={isSubmitting}
+          minHeight={320}
         />
       </div>
       <div>

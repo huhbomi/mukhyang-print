@@ -1,20 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import InquiryBoardSearch from "@/components/InquiryBoardSearch";
 import InquiryStatusBadge from "@/components/InquiryStatusBadge";
 import { useAdmin } from "@/contexts/AdminContext";
 import {
   fetchInquiryList,
+  filterInquiryList,
   formatInquiryDate,
   getAnswerStatus,
   getInquiryHref,
 } from "@/lib/inquiries";
+import type { InquirySearchType } from "@/lib/inquiries";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { InquiryListItem } from "@/types/inquiries";
 
 const COL_COUNT = 6;
+const ITEMS_PER_PAGE = 10;
 
 function WriteIcon() {
   return (
@@ -53,7 +56,10 @@ function getInquiryListHref(id: string, isAdmin: boolean): string {
 
 export default function InquiryList() {
   const { isAdmin } = useAdmin();
-  const [inquiries, setInquiries] = useState<InquiryListItem[]>([]);
+  const [allInquiries, setAllInquiries] = useState<InquiryListItem[]>([]);
+  const [searchType, setSearchType] = useState<InquirySearchType>("all");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -67,13 +73,13 @@ export default function InquiryList() {
 
       try {
         const data = await fetchInquiryList();
-        setInquiries(data);
+        setAllInquiries(data);
         setErrorMessage(null);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "문의 목록을 불러오지 못했습니다.";
         setErrorMessage(message);
-        setInquiries([]);
+        setAllInquiries([]);
       } finally {
         setIsLoading(false);
       }
@@ -81,6 +87,33 @@ export default function InquiryList() {
 
     loadInquiries();
   }, []);
+
+  const filteredInquiries = useMemo(
+    () => filterInquiryList(allInquiries, searchType, searchKeyword),
+    [allInquiries, searchType, searchKeyword]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filteredInquiries.length / ITEMS_PER_PAGE));
+
+  const paginatedInquiries = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredInquiries.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredInquiries, currentPage]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
+
+  const handleSearch = (nextSearchType: InquirySearchType, keyword: string) => {
+    setSearchType(nextSearchType);
+    setSearchKeyword(keyword);
+    setCurrentPage(1);
+  };
+
+  const showEmptySearchResult =
+    !isLoading && !errorMessage && allInquiries.length > 0 && filteredInquiries.length === 0;
 
   return (
     <>
@@ -129,7 +162,7 @@ export default function InquiryList() {
               </tr>
             )}
 
-            {!isLoading && !errorMessage && inquiries.length === 0 && (
+            {!isLoading && !errorMessage && allInquiries.length === 0 && (
               <tr>
                 <td colSpan={COL_COUNT} className="px-4 py-16 text-center text-sm text-muted">
                   등록된 문의가 없습니다.
@@ -137,10 +170,20 @@ export default function InquiryList() {
               </tr>
             )}
 
+            {showEmptySearchResult && (
+              <tr>
+                <td colSpan={COL_COUNT} className="px-4 py-16 text-center text-sm text-muted">
+                  검색 결과가 없습니다.
+                </td>
+              </tr>
+            )}
+
             {!isLoading &&
               !errorMessage &&
-              inquiries.map((inquiry, index) => {
+              paginatedInquiries.map((inquiry, index) => {
                 const href = getInquiryListHref(inquiry.id, isAdmin);
+                const rowNumber =
+                  filteredInquiries.length - ((currentPage - 1) * ITEMS_PER_PAGE + index);
 
                 return (
                   <tr
@@ -148,7 +191,7 @@ export default function InquiryList() {
                     className="border-b border-border bg-white transition-colors hover:bg-gray-50/80"
                   >
                     <td className="border-r border-border px-2 py-3.5 text-center text-gray-600">
-                      {inquiries.length - index}
+                      {rowNumber}
                     </td>
                     <td className="border-r border-border px-2 py-3.5 text-center text-gray-600">
                       {inquiry.inquiry_type}
@@ -156,7 +199,6 @@ export default function InquiryList() {
                     <td className="border-r border-border px-3 py-3.5">
                       <Link
                         href={href}
-                        onClick={() => console.log("inquiry href", href)}
                         className="text-left text-gray-800 transition-colors hover:text-brand"
                       >
                         {inquiry.title}
@@ -180,20 +222,38 @@ export default function InquiryList() {
           </tbody>
         </table>
       </div>
-      
-      <InquiryBoardSearch />
 
-      <div className="mt-10 flex justify-center">
-        <nav aria-label="페이지네이션">
-          <ol className="flex items-center gap-1">
-            <li>
-              <span className="flex h-8 w-8 items-center justify-center border border-brand bg-brand text-sm text-white">
-                1
-              </span>
-            </li>
-          </ol>
-        </nav>
-      </div>
+      <InquiryBoardSearch onSearch={handleSearch} />
+
+      {!isLoading && !errorMessage && filteredInquiries.length > 0 && (
+        <div className="mt-10 flex justify-center">
+          <nav aria-label="페이지네이션">
+            <ol className="flex items-center gap-1">
+              {Array.from({ length: totalPages }, (_, index) => {
+                const page = index + 1;
+                const isActive = page === currentPage;
+
+                return (
+                  <li key={page}>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage(page)}
+                      className={`flex h-8 w-8 items-center justify-center border text-sm transition-colors ${
+                        isActive
+                          ? "border-brand bg-brand text-white"
+                          : "border-border bg-white text-gray-700 hover:border-brand hover:text-brand"
+                      }`}
+                      aria-current={isActive ? "page" : undefined}
+                    >
+                      {page}
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+        </div>
+      )}
     </>
   );
 }

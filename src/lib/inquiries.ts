@@ -280,6 +280,49 @@ export function formatInquiryDate(createdAt: string): string {
   return createdAt.slice(0, 10);
 }
 
+export type InquirySearchType =
+  | "all"
+  | "title"
+  | "writer"
+  | "author"
+  | "inquiry_type";
+
+export function filterInquiryList(
+  items: InquiryListItem[],
+  searchType: InquirySearchType | string,
+  keyword: string
+): InquiryListItem[] {
+  const normalizedKeyword = keyword.trim().toLowerCase();
+
+  if (!normalizedKeyword) {
+    return items;
+  }
+
+  return items.filter((item) => {
+    const title = item.title?.toLowerCase() ?? "";
+    const writer = item.writer?.toLowerCase() ?? "";
+    const inquiryType = item.inquiry_type?.toLowerCase() ?? "";
+
+    if (searchType === "title") {
+      return title.includes(normalizedKeyword);
+    }
+
+    if (searchType === "writer" || searchType === "author") {
+      return writer.includes(normalizedKeyword);
+    }
+
+    if (searchType === "inquiry_type") {
+      return inquiryType.includes(normalizedKeyword);
+    }
+
+    return (
+      title.includes(normalizedKeyword) ||
+      writer.includes(normalizedKeyword) ||
+      inquiryType.includes(normalizedKeyword)
+    );
+  });
+}
+
 export function getAnswerStatus(
   item: Pick<InquiryListItem, "answer_status">
 ): AnswerStatus {
