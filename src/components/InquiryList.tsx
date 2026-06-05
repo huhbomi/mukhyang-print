@@ -4,18 +4,17 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import InquiryBoardSearch from "@/components/InquiryBoardSearch";
 import InquiryStatusBadge from "@/components/InquiryStatusBadge";
+import { useAdmin } from "@/contexts/AdminContext";
 import {
   fetchInquiryList,
   formatInquiryDate,
   getAnswerStatus,
+  getInquiryHref,
 } from "@/lib/inquiries";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import type { InquiryListItem } from "@/types/inquiries";
 
 const COL_COUNT = 6;
-
-// Supabase Auth 연동 전까지 관리자 분기 비활성화
-const isAdmin = false;
 
 function WriteIcon() {
   return (
@@ -48,14 +47,12 @@ function InquiryWriteAction() {
   );
 }
 
-function getInquiryListHref(id: string): string {
-  if (isAdmin) {
-    return `/inquiry/${id}`;
-  }
-  return `/inquiry/${id}/password`;
+function getInquiryListHref(id: string, isAdmin: boolean): string {
+  return getInquiryHref(id, isAdmin);
 }
 
 export default function InquiryList() {
+  const { isAdmin } = useAdmin();
   const [inquiries, setInquiries] = useState<InquiryListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -143,7 +140,7 @@ export default function InquiryList() {
             {!isLoading &&
               !errorMessage &&
               inquiries.map((inquiry, index) => {
-                const href = getInquiryListHref(inquiry.id);
+                const href = getInquiryListHref(inquiry.id, isAdmin);
 
                 return (
                   <tr

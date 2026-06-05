@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { isSupabaseConfigured, getSupabaseClient } from "@/lib/supabase";
 import type { InquiryInsert } from "@/types/inquiries";
+import { INQUIRY_TYPES } from "@/types/inquiries";
 
-const inquiryTypes = ["명함", "카타로그", "리플렛", "스티커", "전단지", "봉투", "기타"] as const;
+const inquiryTypes = INQUIRY_TYPES;
 
 type FormRowProps = {
   label: string;

@@ -2,34 +2,78 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import {
+  createNoticeApi,
+  updateNoticeApi,
+} from "@/lib/notices";
+import { isSupabaseConfigured } from "@/lib/supabase";
 
 const inputClassName =
   "w-full border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 outline-none transition-colors focus:border-brand";
 
 type AdminNoticeFormProps = {
   mode: "create" | "edit";
+  noticeId?: string;
   defaultTitle?: string;
   defaultContent?: string;
+  defaultIsPinned?: boolean;
   cancelHref?: string;
 };
 
 export default function AdminNoticeForm({
   mode,
+  noticeId,
   defaultTitle = "",
   defaultContent = "",
+  defaultIsPinned = false,
   cancelHref = "/admin/notices",
 }: AdminNoticeFormProps) {
   const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    alert(
-      mode === "create"
-        ? "공지사항이 등록되었습니다. (UI 미리보기)"
-        : "공지사항이 수정되었습니다. (UI 미리보기)"
-    );
-    router.push("/admin/notices");
+
+    const formData = new FormData(e.currentTarget);
+    const title = formData.get("title")?.toString().trim() ?? "";
+    const content = formData.get("content")?.toString().trim() ?? "";
+    const is_pinned = formData.get("is_pinned") === "on";
+
+    if (!title || !content) {
+      alert("제목과 내용을 입력해 주세요.");
+      return;
+    }
+
+    if (!isSupabaseConfigured()) {
+      alert("Supabase 연결 설정이 필요합니다.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      if (mode === "create") {
+        await createNoticeApi({ title, content, is_pinned });
+        alert("공지사항이 등록되었습니다.");
+      } else {
+        if (!noticeId) {
+          alert("공지사항 ID가 없습니다.");
+          return;
+        }
+        await updateNoticeApi(noticeId, { title, content, is_pinned });
+        alert("공지사항이 수정되었습니다.");
+      }
+
+      router.push("/admin/notices");
+      router.refresh();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "처리 중 오류가 발생했습니다.";
+      alert(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -46,6 +90,7 @@ export default function AdminNoticeForm({
           defaultValue={defaultTitle}
           className={inputClassName}
           placeholder="제목을 입력하세요"
+          disabled={isSubmitting}
         />
       </div>
       <div>
@@ -60,7 +105,20 @@ export default function AdminNoticeForm({
           defaultValue={defaultContent}
           className={`${inputClassName} resize-y`}
           placeholder="내용을 입력하세요"
+          disabled={isSubmitting}
         />
+      </div>
+      <div>
+        <label className="flex cursor-pointer items-center gap-2">
+          <input
+            type="checkbox"
+            name="is_pinned"
+            defaultChecked={defaultIsPinned}
+            className="h-4 w-4 accent-brand"
+            disabled={isSubmitting}
+          />
+          <span className="text-sm text-gray-700">상단 고정 공지</span>
+        </label>
       </div>
       <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
         <Link
@@ -71,9 +129,10 @@ export default function AdminNoticeForm({
         </Link>
         <button
           type="submit"
-          className="border border-brand bg-brand px-8 py-2.5 text-sm text-white transition-colors hover:bg-brand-dark"
+          disabled={isSubmitting}
+          className="border border-brand bg-brand px-8 py-2.5 text-sm text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {mode === "create" ? "등록" : "수정완료"}
+          {isSubmitting ? "처리 중..." : mode === "create" ? "등록" : "수정완료"}
         </button>
       </div>
     </form>

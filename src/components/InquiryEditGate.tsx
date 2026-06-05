@@ -5,15 +5,15 @@ import { readInquiryDetailFromSession } from "@/lib/inquiries";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-type InquiryDetailGateProps = {
+type InquiryEditGateProps = {
   inquiryId: string;
   children: React.ReactNode;
 };
 
-export default function InquiryDetailGate({
+export default function InquiryEditGate({
   inquiryId,
   children,
-}: InquiryDetailGateProps) {
+}: InquiryEditGateProps) {
   const router = useRouter();
   const { isAdmin, isAuthLoading } = useAdmin();
   const [hasAccess, setHasAccess] = useState(false);
@@ -25,7 +25,8 @@ export default function InquiryDetailGate({
     }
 
     if (isAdmin) {
-      setHasAccess(true);
+      router.replace(`/inquiry/${inquiryId}`);
+      setHasAccess(false);
       setIsChecking(false);
       return;
     }

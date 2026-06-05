@@ -1,12 +1,19 @@
-import { redirect } from "next/navigation";
+import AdminLayout from "@/components/admin/AdminLayout";
+import AdminNoticeEditLoader from "@/components/admin/AdminNoticeEditLoader";
+import AdminRouteGuard from "@/components/admin/AdminRouteGuard";
 
-type AdminNoticeEditRedirectPageProps = {
+type AdminNoticeEditPageProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function AdminNoticeEditRedirectPage({
-  params,
-}: AdminNoticeEditRedirectPageProps) {
+export default async function AdminNoticeEditPage({ params }: AdminNoticeEditPageProps) {
   const { id } = await params;
-  redirect(`/customer/notice/${id}/edit`);
+
+  return (
+    <AdminRouteGuard>
+      <AdminLayout title="공지사항 수정">
+        <AdminNoticeEditLoader id={id} />
+      </AdminLayout>
+    </AdminRouteGuard>
+  );
 }

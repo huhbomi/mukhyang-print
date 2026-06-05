@@ -41,3 +41,22 @@ export type AdminReply = {
   date: string;
   content: string;
 };
+
+export type InquiryUpdatePayload = {
+  writer: string;
+  phone: string | null;
+  email: string | null;
+  inquiry_type: string;
+  title: string;
+  content: string;
+};
+
+export const INQUIRY_TYPES = [
+  "명함",
+  "카타로그",
+  "리플렛",
+  "스티커",
+  "전단지",
+  "봉투",
+  "기타",
+] as const;
