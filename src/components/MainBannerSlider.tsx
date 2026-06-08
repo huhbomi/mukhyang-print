@@ -6,11 +6,27 @@ import { useCallback, useEffect, useState } from "react";
 const BANNER_WIDTH = 1900;
 const BANNER_HEIGHT = 600;
 
-const BANNER_IMAGES = [
-  { src: "/images/banner (1).png", alt: "묵향인쇄 배너 1" },
-  { src: "/images/banner (2).png", alt: "묵향인쇄 배너 2" },
-  { src: "/images/banner (3).png", alt: "묵향인쇄 배너 3" },
-  { src: "/images/banner (4).png", alt: "묵향인쇄 배너 4" },
+const BANNERS = [
+  {
+    src: "/images/banner (1).png",
+    alt: "묵향인쇄 배너 1",
+    bgColor: "#CFDDEB",
+  },
+  {
+    src: "/images/banner (2).png",
+    alt: "묵향인쇄 배너 2",
+    bgColor: "#E7E6D8",
+  },
+  {
+    src: "/images/banner (3).png",
+    alt: "묵향인쇄 배너 3",
+    bgColor: "#E8EBEE",
+  },
+  {
+    src: "/images/banner (4).png",
+    alt: "묵향인쇄 배너 4",
+    bgColor: "#EDDCC5",
+  },
 ] as const;
 
 const AUTOPLAY_INTERVAL_MS = 4000;
@@ -20,7 +36,7 @@ export default function MainBannerSlider() {
   const [isPaused, setIsPaused] = useState(false);
 
   const goTo = useCallback((index: number) => {
-    const total = BANNER_IMAGES.length;
+    const total = BANNERS.length;
     setActiveIndex(((index % total) + total) % total);
   }, []);
 
@@ -38,7 +54,7 @@ export default function MainBannerSlider() {
     }
 
     const timer = window.setInterval(() => {
-      setActiveIndex((prev) => (prev + 1) % BANNER_IMAGES.length);
+      setActiveIndex((prev) => (prev + 1) % BANNERS.length);
     }, AUTOPLAY_INTERVAL_MS);
 
     return () => window.clearInterval(timer);
@@ -46,12 +62,15 @@ export default function MainBannerSlider() {
 
   return (
     <div
-      className="relative w-full overflow-hidden border-b border-border bg-gray-100"
-      style={{ aspectRatio: `${BANNER_WIDTH} / ${BANNER_HEIGHT}` }}
+      className="relative w-full overflow-hidden border-b border-border transition-[background-color] duration-[800ms] ease-in-out"
+      style={{
+        aspectRatio: `${BANNER_WIDTH} / ${BANNER_HEIGHT}`,
+        backgroundColor: BANNERS[activeIndex].bgColor,
+      }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {BANNER_IMAGES.map((banner, index) => (
+      {BANNERS.map((banner, index) => (
         <Image
           key={banner.src}
           src={banner.src}
@@ -85,7 +104,7 @@ export default function MainBannerSlider() {
       </button>
 
       <div className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 gap-2 md:bottom-5">
-        {BANNER_IMAGES.map((banner, index) => (
+        {BANNERS.map((banner, index) => (
           <button
             key={banner.src}
             type="button"

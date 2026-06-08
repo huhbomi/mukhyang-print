@@ -8,7 +8,7 @@ const PHONE = "031-989-0317";
 
 export default function HomeLocationSection() {
   return (
-    <section className="bg-[#f9fafb] py-16 md:py-20">
+    <section className="border-t border-border bg-white py-20 md:py-28">
       <div className="mx-auto max-w-[1100px] px-4">
         <HomeSectionTitle title="오시는 길" />
 
@@ -17,7 +17,7 @@ export default function HomeLocationSection() {
           target="_blank"
           rel="noopener noreferrer"
           aria-label="카카오맵에서 묵향인쇄 위치 보기"
-          className="group relative block overflow-hidden rounded-xl border border-gray-200"
+          className="group relative block overflow-hidden rounded-xl border border-border"
         >
           <span className="absolute right-3 top-3 z-10 rounded-md bg-black/60 px-2.5 py-1 text-xs font-medium text-white">
             카카오맵에서 보기
@@ -31,23 +31,25 @@ export default function HomeLocationSection() {
           />
         </a>
 
-        <div className="mt-8 grid gap-4 border-t border-border pt-8 sm:grid-cols-2">
+        <div className="mt-10 grid gap-6 border-t border-border pt-10 sm:grid-cols-2">
           <div>
-            <p className="text-sm font-medium text-gray-700">주소</p>
-            <p className="mt-1 text-sm leading-relaxed text-muted">{ADDRESS}</p>
+            <p className="text-xs font-medium tracking-[0.15em] text-muted">ADDRESS</p>
+            <p className="mt-2 text-sm leading-relaxed text-gray-800 md:text-base">
+              {ADDRESS}
+            </p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-700">전화</p>
+            <p className="text-xs font-medium tracking-[0.15em] text-muted">PHONE</p>
             <a
               href={`tel:${PHONE}`}
-              className="mt-1 block text-sm text-brand transition-colors hover:text-brand-dark"
+              className="mt-2 block text-sm font-semibold text-brand transition-colors hover:text-brand-dark md:text-base"
             >
               {PHONE}
             </a>
           </div>
         </div>
 
-        <div className="mt-6 text-center">
+        <div className="mt-8 text-center">
           <Link
             href="/company/location"
             className="inline-flex items-center text-sm font-medium text-brand transition-colors hover:text-brand-dark"
