@@ -1,5 +1,4 @@
 import AdminHeaderStatus from "@/components/AdminHeaderStatus";
-import MainBannerSlider from "@/components/MainBannerSlider";
 import Navigation from "@/components/Navigation";
 import SiteLogo from "@/components/SiteLogo";
 
@@ -16,7 +15,6 @@ export default function Header() {
       </div>
 
       <Navigation />
-      <MainBannerSlider />
     </header>
   );
 }
