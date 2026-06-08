@@ -116,8 +116,6 @@ export default function InquiryWriteForm() {
 
     setIsSubmitting(true);
 
-    const password = formData.get("password")!.toString();
-
     try {
       const supabase = getSupabaseClient();
       const inquiryId = crypto.randomUUID();

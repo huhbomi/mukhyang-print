@@ -1,4 +1,4 @@
-import DOMPurify from "isomorphic-dompurify";
+import createDOMPurify from "dompurify";
 
 const ALLOWED_TAGS = [
   "p",
@@ -30,9 +30,31 @@ const ALLOWED_STYLE_PROPS = [
   "text-align",
 ];
 
+type PurifyInstance = ReturnType<typeof createDOMPurify>;
+
+let purify: PurifyInstance | null = null;
 let hooksRegistered = false;
 
-function registerSanitizeHooks() {
+function getPurify(): PurifyInstance | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  if (!purify) {
+    purify = createDOMPurify(window);
+  }
+
+  return purify;
+}
+
+function stripDangerousHtml(html: string): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<iframe[\s\S]*?<\/iframe>/gi, "")
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+}
+
+function registerSanitizeHooks(DOMPurify: PurifyInstance) {
   if (hooksRegistered) {
     return;
   }
@@ -64,7 +86,13 @@ function registerSanitizeHooks() {
 
 /** XSS 방지를 위한 HTML sanitize */
 export function sanitizeHtml(html: string): string {
-  registerSanitizeHooks();
+  const DOMPurify = getPurify();
+
+  if (!DOMPurify) {
+    return stripDangerousHtml(html);
+  }
+
+  registerSanitizeHooks(DOMPurify);
 
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS,

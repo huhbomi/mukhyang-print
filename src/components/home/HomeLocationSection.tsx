@@ -3,7 +3,7 @@ import Link from "next/link";
 import HomeSectionTitle from "@/components/home/HomeSectionTitle";
 
 const KAKAO_MAP_URL = "https://map.kakao.com/link/search/묵향인쇄";
-const ADDRESS = "경기 김포시 통진읍 김포대로 2323";
+const ADDRESS = "경기 김포시 통진읍 김포대로 2323 2층 묵향인쇄소";
 const PHONE = "031-989-0317";
 
 export default function HomeLocationSection() {
@@ -37,15 +37,6 @@ export default function HomeLocationSection() {
             <p className="mt-2 text-sm leading-relaxed text-gray-800 md:text-base">
               {ADDRESS}
             </p>
-          </div>
-          <div>
-            <p className="text-xs font-medium tracking-[0.15em] text-muted">PHONE</p>
-            <a
-              href={`tel:${PHONE}`}
-              className="mt-2 block text-sm font-semibold text-brand transition-colors hover:text-brand-dark md:text-base"
-            >
-              {PHONE}
-            </a>
           </div>
         </div>
 
