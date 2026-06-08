@@ -16,7 +16,7 @@ export default function SiteLogo() {
         묵향인쇄
       </span>
       <span className="mt-2 text-[10px] font-medium tracking-[0.28em] text-gray-500 md:text-xs">
-        MUKHYANG PRINTING
+        MOOKHYANG PRINTING
       </span>
     </Link>
   );

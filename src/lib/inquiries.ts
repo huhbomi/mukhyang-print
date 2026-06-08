@@ -11,7 +11,7 @@ const LIST_VIEW_SELECT =
   "id, inquiry_type, title, writer, created_at, is_private, answer_status";
 
 export const INQUIRY_DETAIL_SESSION_KEY = (id: string) =>
-  `mukhyang-inquiry-detail-${id}`;
+  `mookhyang-inquiry-detail-${id}`;
 
 /** RPC·sessionStorage 응답에서 password 필드 제거 */
 export function sanitizeInquiryDetail(

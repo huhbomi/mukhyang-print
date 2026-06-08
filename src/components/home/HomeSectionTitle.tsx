@@ -9,7 +9,7 @@ export default function HomeSectionTitle({
 }: HomeSectionTitleProps) {
   return (
     <div className="mb-12 text-center md:mb-14">
-      <p className="text-xs font-medium tracking-[0.2em] text-brand">MUKHYANG</p>
+      <p className="text-xs font-medium tracking-[0.2em] text-brand">MOOKHYANG</p>
       <h2 className="mt-2 text-2xl font-semibold tracking-tight text-gray-900 md:text-3xl">
         {title}
       </h2>

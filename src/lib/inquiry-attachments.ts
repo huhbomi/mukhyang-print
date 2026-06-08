@@ -7,10 +7,10 @@ import {
 } from "@/types/inquiry-attachments";
 
 export const INQUIRY_ATTACHMENTS_SESSION_KEY = (id: string) =>
-  `mukhyang-inquiry-attachments-${id}`;
+  `mookhyang-inquiry-attachments-${id}`;
 
 export const INQUIRY_PASSWORD_SESSION_KEY = (id: string) =>
-  `mukhyang-inquiry-password-${id}`;
+  `mookhyang-inquiry-password-${id}`;
 
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
