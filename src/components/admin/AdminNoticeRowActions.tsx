@@ -1,14 +1,38 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { deleteNoticeApi } from "@/lib/notices";
 
 type AdminNoticeRowActionsProps = {
-  postId: number;
+  postId: string;
+  onDeleted?: () => void;
 };
 
-export default function AdminNoticeRowActions({ postId }: AdminNoticeRowActionsProps) {
-  const handleDelete = () => {
-    alert("삭제되었습니다. (UI 미리보기 — 실제 삭제 기능은 추후 연동 예정)");
+export default function AdminNoticeRowActions({
+  postId,
+  onDeleted,
+}: AdminNoticeRowActionsProps) {
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    if (!window.confirm("이 공지사항을 삭제하시겠습니까?")) {
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      await deleteNoticeApi(postId);
+      alert("삭제되었습니다.");
+      onDeleted?.();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "삭제 중 오류가 발생했습니다.";
+      alert(message);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -22,9 +46,10 @@ export default function AdminNoticeRowActions({ postId }: AdminNoticeRowActionsP
       <button
         type="button"
         onClick={handleDelete}
-        className="border border-gray-400 px-3 py-1 text-xs text-gray-700 transition-colors hover:border-red-400 hover:text-red-600"
+        disabled={isDeleting}
+        className="border border-gray-400 px-3 py-1 text-xs text-gray-700 transition-colors hover:border-red-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        삭제
+        {isDeleting ? "삭제 중..." : "삭제"}
       </button>
     </div>
   );

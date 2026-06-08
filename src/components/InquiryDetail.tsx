@@ -1,10 +1,21 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import InquiryAdminReplyPanel from "@/components/InquiryAdminReplyPanel";
 import InquiryAdminReplySection from "@/components/InquiryAdminReplySection";
-import InquiryAdminReplyWrite from "@/components/InquiryAdminReplyWrite";
+import InquiryDetailAttachments from "@/components/InquiryDetailAttachments";
+import RichTextContent from "@/components/RichTextContent";
 import { useAdmin } from "@/contexts/AdminContext";
-import { formatInquiryDate, mapAdminReply } from "@/lib/inquiries";
+import {
+  deleteInquiryWithPassword,
+  formatInquiryDate,
+  mapAdminReply,
+  removeInquiryDetailFromSession,
+} from "@/lib/inquiries";
+import { removeInquiryPasswordFromSession } from "@/lib/inquiry-attachments";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import type { InquiryDetail as InquiryDetailType } from "@/types/inquiries";
 
 type DetailRowProps = {
@@ -29,14 +40,52 @@ function DetailRow({ label, children, className = "" }: DetailRowProps) {
 const buttonOutlineClass =
   "inline-block w-full border border-gray-400 px-6 py-2.5 text-center text-sm text-gray-700 transition-colors hover:border-brand hover:text-brand sm:w-auto";
 
-export default function InquiryDetail({ inquiry }: { inquiry: InquiryDetailType }) {
+export default function InquiryDetail({
+  inquiry,
+  onInquiryChange,
+}: {
+  inquiry: InquiryDetailType;
+  onInquiryChange?: (inquiry: InquiryDetailType) => void;
+}) {
+  const router = useRouter();
   const { isAdmin } = useAdmin();
+  const [isDeleting, setIsDeleting] = useState(false);
   const adminReply = mapAdminReply(inquiry);
 
-  const handleDelete = () => {
-    // TODO: Supabase 연동 시 관리자 권한으로만 삭제 처리
-    if (window.confirm("이 문의를 삭제하시겠습니까?")) {
-      alert("삭제되었습니다. (UI 미리보기 — 실제 삭제 기능은 추후 연동 예정)");
+  const handleDelete = async () => {
+    if (!window.confirm("이 문의를 삭제하시겠습니까?")) {
+      return;
+    }
+
+    const password = window.prompt("비밀번호를 입력해 주세요.");
+    if (!password?.trim()) {
+      alert("비밀번호를 입력해 주세요.");
+      return;
+    }
+
+    if (!isSupabaseConfigured()) {
+      alert("Supabase 연결 설정이 필요합니다.");
+      return;
+    }
+
+    setIsDeleting(true);
+
+    try {
+      const deleted = await deleteInquiryWithPassword(inquiry.id, password);
+
+      if (!deleted) {
+        alert("비밀번호가 일치하지 않거나 삭제할 수 없습니다.");
+        return;
+      }
+
+      removeInquiryDetailFromSession(inquiry.id);
+      removeInquiryPasswordFromSession(inquiry.id);
+      alert("삭제되었습니다.");
+      router.push("/inquiry");
+    } catch {
+      alert("삭제 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -55,30 +104,48 @@ export default function InquiryDetail({ inquiry }: { inquiry: InquiryDetailType 
         <DetailRow label="연락처">{inquiry.phone ?? "—"}</DetailRow>
         <DetailRow label="이메일">{inquiry.email ?? "—"}</DetailRow>
         <DetailRow label="날짜">{formatInquiryDate(inquiry.created_at)}</DetailRow>
-        <DetailRow label="문의유형">{inquiry.inquiry_type}</DetailRow>
-        <DetailRow label="내용" className="border-b-0">
-          <div className="whitespace-pre-wrap leading-relaxed">{inquiry.content}</div>
+        <DetailRow label="문의유형" className="border-b-0">
+          {inquiry.inquiry_type}
         </DetailRow>
       </div>
 
-      {(adminReply || !isAdmin) && <InquiryAdminReplySection reply={adminReply} />}
-      {isAdmin && <InquiryAdminReplyWrite existingReply={adminReply} />}
+      <div className="mt-10 border border-border">
+        <div className="border-b border-border bg-[#f9f9f9] px-4 py-3">
+          <h2 className="text-sm font-semibold text-gray-800">문의 내용</h2>
+        </div>
+        <div className="bg-white px-4 py-5 md:px-6 md:py-6">
+          <RichTextContent html={inquiry.content} />
+        </div>
+      </div>
+
+      <InquiryDetailAttachments inquiryId={inquiry.id} />
+
+      {!isAdmin && <InquiryAdminReplySection reply={adminReply} />}
+      {isAdmin && (
+        <InquiryAdminReplyPanel inquiry={inquiry} onInquiryChange={onInquiryChange} />
+      )}
 
       <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
         <Link href="/inquiry" className={buttonOutlineClass}>
           목록
         </Link>
         {!isAdmin && (
-          <button type="button" className={buttonOutlineClass}>
-            수정
-          </button>
+          <>
+            <Link href={`/inquiry/${inquiry.id}/edit`} className={buttonOutlineClass}>
+              수정
+            </Link>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className={`${buttonOutlineClass} disabled:cursor-not-allowed disabled:opacity-60`}
+            >
+              {isDeleting ? "삭제 중..." : "삭제"}
+            </button>
+          </>
         )}
-        {isAdmin ? (
+        {isAdmin && (
           <button type="button" onClick={handleDelete} className={buttonOutlineClass}>
-            삭제
-          </button>
-        ) : (
-          <button type="button" className={buttonOutlineClass}>
             삭제
           </button>
         )}

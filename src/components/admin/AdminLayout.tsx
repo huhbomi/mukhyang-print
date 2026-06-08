@@ -16,10 +16,10 @@ export default function AdminLayout({ children, title }: AdminLayoutProps) {
           </Link>
           <nav className="flex items-center gap-4 text-sm">
             <Link
-              href="/customer/notice"
+              href="/admin/notices"
               className="text-gray-600 transition-colors hover:text-brand"
             >
-              공지사항
+              공지관리
             </Link>
             <Link
               href="/inquiry"

@@ -13,7 +13,12 @@ export function getSupabaseClient(): SupabaseClient {
   }
 
   const { url, anonKey } = getSupabaseEnv();
-  supabaseClient = createClient(url, anonKey);
+  supabaseClient = createClient(url, anonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  });
 
   return supabaseClient;
 }

@@ -1,7 +1,7 @@
 "use client";
 
+import { useAdmin } from "@/contexts/AdminContext";
 import { readInquiryDetailFromSession } from "@/lib/inquiries";
-import { INQUIRY_ADMIN_ENABLED } from "@/lib/admin-preview";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -15,12 +15,14 @@ export default function InquiryDetailGate({
   children,
 }: InquiryDetailGateProps) {
   const router = useRouter();
+  const { isAdmin, isAuthLoading } = useAdmin();
   const [hasAccess, setHasAccess] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
-    // TODO: Supabase Auth 연동 후 관리자는 RPC/별도 admin API로 상세 조회
-    const isAdmin = INQUIRY_ADMIN_ENABLED;
+    if (isAuthLoading) {
+      return;
+    }
 
     if (isAdmin) {
       setHasAccess(true);
@@ -39,9 +41,9 @@ export default function InquiryDetailGate({
     router.replace(`/inquiry/${inquiryId}/password`);
     setHasAccess(false);
     setIsChecking(false);
-  }, [inquiryId, router]);
+  }, [inquiryId, isAdmin, isAuthLoading, router]);
 
-  if (isChecking) {
+  if (isAuthLoading || isChecking) {
     return (
       <p className="py-16 text-center text-sm text-muted">접근 권한을 확인하는 중입니다...</p>
     );

@@ -18,17 +18,6 @@ export const navItems: NavItem[] = [
     ],
   },
   {
-    label: "제품소개",
-    children: [
-      { label: "명함", href: "/product/business-card" },
-      { label: "카타로그", href: "/product/catalog" },
-      { label: "리플렛", href: "/product/leaflet" },
-      { label: "스티커", href: "/product/sticker" },
-      { label: "전단지", href: "/product/flyer" },
-      { label: "봉투", href: "/product/envelope" },
-    ],
-  },
-  {
     label: "상담문의",
     href: "/inquiry",
   },

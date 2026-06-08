@@ -1,10 +1,7 @@
 "use client";
 
-import {
-  ADMIN_PREVIEW_MODE,
-  ADMIN_SESSION_KEY,
-  INQUIRY_ADMIN_ENABLED,
-} from "@/lib/admin-preview";
+import { getSupabaseClient } from "@/lib/supabase";
+import { fetchIsAdmin } from "@/lib/profiles";
 import {
   createContext,
   useCallback,
@@ -16,40 +13,103 @@ import {
 
 type AdminContextValue = {
   isAdmin: boolean;
-  loginAsAdmin: () => void;
-  logoutAdmin: () => void;
+  isAuthLoading: boolean;
+  loginAsAdmin: (email: string, password: string) => Promise<void>;
+  logoutAdmin: () => Promise<void>;
 };
 
 const AdminContext = createContext<AdminContextValue | null>(null);
 
+async function resolveAdminStatus(): Promise<boolean> {
+  const supabase = getSupabaseClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    return false;
+  }
+
+  console.log("[auth] session user.id", session.user.id);
+  return fetchIsAdmin(session.user.id);
+}
+
 export function AdminProvider({ children }: { children: React.ReactNode }) {
-  const [sessionAdmin, setSessionAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  const refreshAdminStatus = useCallback(async () => {
+    setIsAuthLoading(true);
+
+    try {
+      const admin = await resolveAdminStatus();
+      setIsAdmin(admin);
+    } catch {
+      setIsAdmin(false);
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (ADMIN_PREVIEW_MODE) {
-      setSessionAdmin(true);
-      return;
+    const supabase = getSupabaseClient();
+
+    refreshAdminStatus();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      refreshAdminStatus();
+    });
+
+    return () => subscription.unsubscribe();
+  }, [refreshAdminStatus]);
+
+  const loginAsAdmin = useCallback(async (email: string, password: string) => {
+    const supabase = getSupabaseClient();
+
+    const { data: signInData, error: signInError } =
+      await supabase.auth.signInWithPassword({ email, password });
+
+    if (signInError) {
+      throw signInError;
     }
-    const stored = localStorage.getItem(ADMIN_SESSION_KEY);
-    setSessionAdmin(stored === "true");
+
+    console.log("[auth] signInWithPassword 성공");
+
+    const user = signInData.user;
+    console.log("[auth] logged in user.id", user?.id);
+
+    if (!user) {
+      throw new Error("로그인 사용자 정보를 가져올 수 없습니다.");
+    }
+
+    const isAdminUser = await fetchIsAdmin(user.id);
+
+    if (!isAdminUser) {
+      await supabase.auth.signOut();
+      throw new Error("관리자 권한이 없습니다.");
+    }
+
+    setIsAdmin(true);
+    setIsAuthLoading(false);
   }, []);
 
-  // Supabase Auth 연동 전: 문의 게시판 관리자 분기는 항상 false
-  const isAdmin = INQUIRY_ADMIN_ENABLED && sessionAdmin;
+  const logoutAdmin = useCallback(async () => {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.auth.signOut();
 
-  const loginAsAdmin = useCallback(() => {
-    localStorage.setItem(ADMIN_SESSION_KEY, "true");
-    setSessionAdmin(true);
-  }, []);
+    if (error) {
+      throw error;
+    }
 
-  const logoutAdmin = useCallback(() => {
-    localStorage.removeItem(ADMIN_SESSION_KEY);
-    setSessionAdmin(false);
+    setIsAdmin(false);
+    setIsAuthLoading(false);
   }, []);
 
   const value = useMemo(
-    () => ({ isAdmin, loginAsAdmin, logoutAdmin }),
-    [isAdmin, loginAsAdmin, logoutAdmin]
+    () => ({ isAdmin, isAuthLoading, loginAsAdmin, logoutAdmin }),
+    [isAdmin, isAuthLoading, loginAsAdmin, logoutAdmin]
   );
 
   return (

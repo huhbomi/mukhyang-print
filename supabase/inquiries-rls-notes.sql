@@ -1,0 +1,15 @@
+-- inquiries RLS 참고
+--
+-- .insert().select('id') 는 INSERT 후 RETURNING(SELECT)이 필요해
+-- anon SELECT 정책이 없으면 "new row violates row-level security policy" 오류가 날 수 있습니다.
+--
+-- 앱 코드는 클라이언트에서 crypto.randomUUID()로 id를 생성하고 INSERT만 수행하도록 변경했습니다.
+-- 따라서 INSERT 정책만 있으면 등록이 가능합니다.
+--
+-- 관리자 로그인 상태(authenticated)에서도 문의 등록을 허용하려면 INSERT 정책에 authenticated를 추가하세요.
+
+-- 예시: anon + authenticated INSERT 허용
+-- CREATE POLICY "Anyone can create inquiries"
+-- ON public.inquiries FOR INSERT
+-- TO anon, authenticated
+-- WITH CHECK (true);
