@@ -17,7 +17,8 @@ export const INQUIRY_DETAIL_SESSION_KEY = (id: string) =>
 export function sanitizeInquiryDetail(
   row: Record<string, unknown>
 ): InquiryDetail {
-  const { password: _password, ...detail } = row;
+  const detail = { ...row };
+  delete detail.password;
   return detail as InquiryDetail;
 }
 
